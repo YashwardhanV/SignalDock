@@ -6,7 +6,7 @@ SignalDock is a small event callback delivery platform built to demonstrate stro
 **GitHub:** [YashwardhanV](https://github.com/YashwardhanV)  
 **Public email:** [yashwardhanverma108@gmail.com](mailto:yashwardhanverma108@gmail.com)
 
-It is an independent modular-monolith implementation inspired by domain ideas in an MIT-licensed reference repository. It is not a renamed copy. Attribution and the design comparison are in [`docs/REFERENCE_ATTRIBUTION.md`](docs/REFERENCE_ATTRIBUTION.md) and [`REPO_ANALYSIS.md`](REPO_ANALYSIS.md).
+
 
 ## Main features
 
