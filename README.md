@@ -7,6 +7,7 @@ SignalDock is a small event callback delivery platform built to demonstrate stro
 **Public email:** [yashwardhanverma108@gmail.com](mailto:yashwardhanverma108@gmail.com)
 
 
+
 ## Main features
 
 - Endpoint registration with active/inactive state, one-time signing-secret display, URL validation, and configurable maximum attempts.
