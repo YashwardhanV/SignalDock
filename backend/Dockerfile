@@ -6,8 +6,6 @@ COPY src src
 RUN mvn -q -DskipTests package
 
 FROM eclipse-temurin:21-jre-alpine
-LABEL org.opencontainers.image.authors="Yashwardhan Verma <yashwardhanverma108@gmail.com>" \
-      org.opencontainers.image.source="https://github.com/YashwardhanV/SignalDock"
 RUN addgroup -S signaldock && adduser -S signaldock -G signaldock
 WORKDIR /app
 COPY --from=build /workspace/target/signaldock-*.jar app.jar

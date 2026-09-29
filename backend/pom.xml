@@ -18,15 +18,6 @@
     <description>PostgreSQL-backed event callback delivery service</description>
     <url>https://github.com/YashwardhanV/SignalDock</url>
 
-    <developers>
-        <developer>
-            <id>YashwardhanV</id>
-            <name>Yashwardhan Verma</name>
-            <email>yashwardhanverma108@gmail.com</email>
-            <url>https://www.linkedin.com/in/yashwardhanv</url>
-        </developer>
-    </developers>
-
     <properties>
         <java.version>21</java.version>
         <springdoc.version>2.8.17</springdoc.version>

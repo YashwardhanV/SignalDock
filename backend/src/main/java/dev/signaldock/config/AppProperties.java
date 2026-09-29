@@ -15,7 +15,6 @@ public record AppProperties(
             Duration connectTimeout,
             Duration readTimeout,
             int batchSize,
-            Duration pollDelay,
             Duration leaseDuration,
             Duration retryBaseDelay,
             Duration retryMaxDelay

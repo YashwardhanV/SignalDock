@@ -3,14 +3,10 @@ server:
   shutdown: graceful
 
 spring:
-  application:
-    name: signaldock
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/signaldock}
     username: ${SPRING_DATASOURCE_USERNAME:signaldock}
     password: ${SPRING_DATASOURCE_PASSWORD:signaldock}
-    hikari:
-      maximum-pool-size: ${DB_POOL_SIZE:10}
   flyway:
     enabled: true
   jpa:
@@ -21,19 +17,12 @@ spring:
       hibernate:
         jdbc:
           time_zone: UTC
-  lifecycle:
-    timeout-per-shutdown-phase: 20s
 
 management:
   endpoints:
     web:
       exposure:
-        include: health,info
-  endpoint:
-    health:
-      probes:
-        enabled: true
-      show-details: never
+        include: health
 
 springdoc:
   swagger-ui:
