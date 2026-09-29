@@ -39,8 +39,8 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(properties.corsAllowedOrigins());
         configuration.setAllowedMethods(List.of("GET", "POST", "PATCH", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(List.of("Content-Type", ApiKeyAuthenticationFilter.HEADER, "Idempotency-Key", "X-Request-Id"));
-        configuration.setExposedHeaders(List.of("Location", "X-Request-Id"));
+        configuration.setAllowedHeaders(List.of("Content-Type", ApiKeyAuthenticationFilter.HEADER, "Idempotency-Key"));
+        configuration.setExposedHeaders(List.of("Location"));
         configuration.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

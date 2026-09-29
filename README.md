@@ -16,7 +16,7 @@ SignalDock is a small event callback delivery platform built to demonstrate stro
 - PostgreSQL-backed delivery queue with `FOR UPDATE SKIP LOCKED`, bounded claims, leases, and abandoned-work recovery.
 - HMAC-SHA256 signatures over `timestamp.rawPayload` with event/delivery identity headers.
 - Configurable connection/read timeouts, exponential backoff, terminal `DEAD` state, full attempt history, response truncation, and manual retry.
-- Paginated DTO-based REST APIs, bean validation, central error responses, request IDs, health endpoint, and OpenAPI UI.
+- Paginated DTO-based REST APIs, bean validation, central error responses, health endpoint, and OpenAPI UI.
 - API-key authentication with a single configured key (`APP_API_KEY`).
 - Responsive React/TypeScript/Tailwind console with live summary, event composer, endpoint routes, attempt timeline, and retry action.
 - Flyway migrations, JUnit 5 unit tests, PostgreSQL Testcontainers integration tests, Docker Compose, seed data, and GitHub Actions CI.

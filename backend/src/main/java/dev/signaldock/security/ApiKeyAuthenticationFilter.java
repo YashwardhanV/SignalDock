@@ -51,7 +51,7 @@ public class ApiKeyAuthenticationFilter extends OncePerRequestFilter {
         if (rawKey == null || !MessageDigest.isEqual(expectedKey, rawKey.trim().getBytes(StandardCharsets.UTF_8))) {
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-            objectMapper.writeValue(response.getWriter(), ApiError.of("unauthorized", "Missing or invalid X-API-Key header", null));
+            objectMapper.writeValue(response.getWriter(), ApiError.of("unauthorized", "Missing or invalid X-API-Key header"));
             return;
         }
         var authentication = new UsernamePasswordAuthenticationToken(
