@@ -2,15 +2,6 @@
 
 ```mermaid
 erDiagram
-    API_KEYS {
-        uuid id PK
-        varchar name
-        varchar key_hash UK
-        boolean active
-        timestamptz created_at
-        timestamptz revoked_at
-    }
-
     WEBHOOK_ENDPOINTS {
         uuid id PK
         varchar name
@@ -20,7 +11,6 @@ erDiagram
         int max_attempts
         timestamptz created_at
         timestamptz updated_at
-        bigint version
     }
 
     ENDPOINT_SUBSCRIPTIONS {
@@ -48,12 +38,10 @@ erDiagram
         int max_attempts
         timestamptz next_retry_at
         timestamptz lease_until
-        varchar claimed_by
         text last_error
         timestamptz completed_at
         timestamptz created_at
         timestamptz updated_at
-        bigint version
     }
 
     DELIVERY_ATTEMPTS {
@@ -74,25 +62,22 @@ erDiagram
     DELIVERIES ||--o{ DELIVERY_ATTEMPTS : records
 ```
 
-## Invariants and constraints
+## Constraints
 
-- `events.idempotency_key` is globally unique. Concurrent retries of the same ingestion request return one event.
-- `(deliveries.event_id, deliveries.endpoint_id)` is unique. Multiple matching patterns cannot create duplicate work for one receiver.
-- `(delivery_attempts.delivery_id, attempt_number)` is unique. Attempt sequence is auditable.
-- `(endpoint_id, lower(event_pattern))` is unique for subscriptions.
-- Active endpoint URLs are case-insensitively unique through a partial index; a deactivated historical endpoint does not block future reuse.
-- Check constraints restrict delivery status, maximum attempts, nonnegative latency/counters, and subscription format.
-- Foreign keys keep the event/delivery/attempt graph valid. Endpoint deletion is modeled as deactivation so historical delivery references remain meaningful.
+- `events.idempotency_key` is unique, so concurrent retries of one request produce one event.
+- `(event_id, endpoint_id)` is unique on `deliveries`: two matching patterns cannot create duplicate work for one receiver.
+- `(endpoint_id, event_pattern)` is unique on `endpoint_subscriptions`. Patterns are stored in lower case.
+- `(delivery_id, attempt_number)` is unique on `delivery_attempts`, which keeps the attempt sequence auditable.
+- Check constraints limit `deliveries.status` to the five states, `max_attempts` to 1–12 on endpoints, and keep counters and latency non-negative.
+- Endpoints are paused (`active = false`) rather than deleted, so old deliveries keep a valid reference.
 
-## Query-driven indexes
+## Indexes
 
-| Index | Query it supports |
+| Index | Used by |
 |---|---|
-| `idx_delivery_queue` partial `(next_retry_at, created_at)` | Due `PENDING`/`RETRY_PENDING` queue scan. |
-| `idx_delivery_expired_leases` partial `(lease_until)` | Recovery of abandoned `PROCESSING` rows. |
-| `idx_deliveries_status_created_at` | Filtered, newest-first delivery dashboard. |
-| `idx_events_created_at` / `idx_events_type_created_at` | Paginated event history and future type filtering. |
-| `idx_attempts_delivery_started_at` | Delivery detail attempt timeline. |
-| `idx_active_subscriptions` | Active routing-table load. |
+| `idx_deliveries_status_next_retry (status, next_retry_at)` | The worker's claim query |
+| `idx_deliveries_created_at (created_at DESC)` | The newest-first delivery list |
+| `idx_events_created_at (created_at DESC)` | The newest-first event list |
+| `uq_delivery_attempt_number (delivery_id, attempt_number)` | Loading a delivery's attempts in order |
 
-The `signing_secret` column is included because the application must sign later background attempts. A production evolution should encrypt it with a managed key or store a secret reference; hashing is impossible because signing needs the original secret.
+`signing_secret` is stored in plain text because the worker needs the original secret to sign each attempt; hashing would make signing impossible.
