@@ -19,7 +19,7 @@ SignalDock is a small event callback delivery platform built to demonstrate stro
 - Paginated DTO-based REST APIs, bean validation, central error responses, request IDs, health endpoint, and OpenAPI UI.
 - Hash-only API-key authentication and admin-controlled one-time key creation.
 - Responsive React/TypeScript/Tailwind console with live summary, event composer, endpoint routes, attempt timeline, and retry action.
-- Flyway migrations, JUnit 5 unit tests, PostgreSQL Testcontainers integration tests, Docker Compose, seed data, benchmark utility, and GitHub Actions CI.
+- Flyway migrations, JUnit 5 unit tests, PostgreSQL Testcontainers integration tests, Docker Compose, seed data, and GitHub Actions CI.
 
 ## Architecture
 
@@ -94,7 +94,7 @@ curl -X POST http://localhost:8080/api/v1/endpoints/ENDPOINT_ID/subscriptions \
   -d '{"eventPattern":"order.*"}'
 ```
 
-List APIs accept `page` and `size`; deliveries additionally accept `status` and ISO-8601 `createdAfter`. See Swagger and the checked-in [`REST API guide`](docs/API.md) for the complete contract and status codes.
+List APIs accept `page` and `size`; deliveries additionally accept `status` and ISO-8601 `createdAfter`. See Swagger UI for the complete contract and status codes.
 
 ## Local development without full Compose
 
@@ -142,30 +142,6 @@ npm run build
 
 CI repeats both checks and builds the Compose images in [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
 
-The final local test, build, dependency-audit, health, and Compose outcomes are recorded in [`docs/VERIFICATION.md`](docs/VERIFICATION.md).
-
-## Benchmarks
-
-Start the Compose demo, then run:
-
-```bash
-node scripts/benchmark.mjs
-```
-
-Override the repeatable workload without editing code:
-
-```bash
-EVENTS=100 RUNS=3 CONCURRENCY=10 DUPLICATES=25 node scripts/benchmark.mjs
-```
-
-PowerShell equivalent:
-
-```powershell
-$env:EVENTS=100; $env:RUNS=3; $env:CONCURRENCY=10; node scripts/benchmark.mjs
-```
-
-The script checks duplicate idempotency responses, submits successful deliveries, polls them to terminal state, fetches attempt timings, and verifies the three-attempt failure path. It prints machine-readable JSON and exits nonzero on correctness failures. Only observed results are recorded in [`docs/BENCHMARK_RESULTS.md`](docs/BENCHMARK_RESULTS.md); no values are extrapolated.
-
 ## Important engineering decisions
 
 - **PostgreSQL queue instead of Kafka:** the accepted event and all initial work share one ACID transaction. This removes broker dual-write handling and keeps the project locally understandable.
@@ -196,12 +172,6 @@ Copy `.env.example` to `.env` to change Compose defaults. Database credentials, 
 3. Tenant ownership and per-key authorization if multi-user requirements appear.
 4. A transactional outbox and broker only if measured ingestion bursts or independent consumers exceed the PostgreSQL queue's needs.
 5. WebSocket/SSE dashboard updates only if polling traffic becomes material.
-
-## Interview preparation and resume claims
-
-- [`docs/INTERVIEW_GUIDE.md`](docs/INTERVIEW_GUIDE.md) explains each major feature, failure cases, tradeoffs, class/table map, and likely questions.
-- [`docs/RESUME_BULLETS.md`](docs/RESUME_BULLETS.md) contains exactly three implementation-only bullets and three benchmark-backed bullets.
-- [`SDE1_AUDIT.md`](SDE1_AUDIT.md) scores depth and highlights what to understand before using the project on a resume.
 
 ## License
 
