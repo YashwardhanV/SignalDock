@@ -13,7 +13,6 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
-import jakarta.persistence.Version;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
@@ -48,9 +47,6 @@ public class Delivery {
     @Column(name = "lease_until")
     private Instant leaseUntil;
 
-    @Column(name = "claimed_by", length = 120)
-    private String claimedBy;
-
     @Column(name = "last_error")
     private String lastError;
 
@@ -62,10 +58,6 @@ public class Delivery {
 
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
-
-    @Version
-    @Column(nullable = false)
-    private long version;
 
     protected Delivery() {
     }
@@ -93,9 +85,8 @@ public class Delivery {
         updatedAt = Instant.now();
     }
 
-    public void claim(String workerId, Instant now, Duration leaseDuration) {
+    public void claim(Instant now, Duration leaseDuration) {
         status = DeliveryStatus.PROCESSING;
-        claimedBy = workerId;
         leaseUntil = now.plus(leaseDuration);
     }
 
@@ -109,7 +100,7 @@ public class Delivery {
 
     public void markFailedAttempt(String error, Instant nextAttemptAt, boolean exhausted) {
         attemptCount++;
-        lastError = truncate(error);
+        lastError = DeliveryAttempt.truncate(error);
         clearLease();
         if (exhausted) {
             status = DeliveryStatus.DEAD;
@@ -133,14 +124,6 @@ public class Delivery {
 
     private void clearLease() {
         leaseUntil = null;
-        claimedBy = null;
-    }
-
-    private String truncate(String value) {
-        if (value == null || value.length() <= 4000) {
-            return value;
-        }
-        return value.substring(0, 4000);
     }
 
     public UUID getId() {
@@ -173,10 +156,6 @@ public class Delivery {
 
     public Instant getLeaseUntil() {
         return leaseUntil;
-    }
-
-    public String getClaimedBy() {
-        return claimedBy;
     }
 
     public String getLastError() {

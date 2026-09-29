@@ -6,7 +6,6 @@ import com.sun.net.httpserver.HttpServer;
 import dev.signaldock.config.AppProperties;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
-import java.time.Clock;
 import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
@@ -84,13 +83,12 @@ class DeliveryHttpClientTest {
                         Duration.ofSeconds(30),
                         Duration.ofSeconds(1),
                         Duration.ofMinutes(1),
-                        4000,
                         true,
                         true
                 ),
                 new AppProperties.Demo(false, "", "")
         );
-        return new DeliveryHttpClient(properties, Clock.systemUTC(), new HmacSignatureService());
+        return new DeliveryHttpClient(properties, new HmacSignatureService());
     }
 
     private DeliveryHttpClient.DeliveryWorkItem item(String path) {

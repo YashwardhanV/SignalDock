@@ -85,7 +85,7 @@ curl -X POST http://localhost:8080/api/v1/endpoints/ENDPOINT_ID/subscriptions \
   -d '{"eventPattern":"order.*"}'
 ```
 
-List APIs accept `page` and `size`; deliveries additionally accept `status` and ISO-8601 `createdAfter`. See Swagger UI for the complete contract and status codes.
+List APIs accept `page` and `size`; deliveries additionally accept `status`. See Swagger UI for the complete contract and status codes.
 
 ## Local development without full Compose
 
@@ -144,7 +144,7 @@ CI repeats both checks and builds the Compose images in [`.github/workflows/ci.y
 
 ## Configuration
 
-Copy `.env.example` to `.env` to change Compose defaults. Database credentials, ports, the API key, worker batch/poll/lease settings, timeouts, retry delays, response limit, CORS origins, and URL-safety flags are environment-driven. Defaults are for local demonstration only. Outside the demo profile, HTTP/private receiver addresses are denied.
+Copy `.env.example` to `.env` to change Compose defaults. Database credentials, ports, the API key, worker batch/poll/lease settings, timeouts, retry delays, CORS origins, and URL-safety flags are environment-driven. Defaults are for local demonstration only. Outside the demo profile, HTTP/private receiver addresses are denied.
 
 ## Known limitations
 

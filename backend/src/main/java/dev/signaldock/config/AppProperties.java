@@ -19,7 +19,6 @@ public record AppProperties(
             Duration leaseDuration,
             Duration retryBaseDelay,
             Duration retryMaxDelay,
-            int responseBodyLimit,
             boolean allowHttp,
             boolean allowPrivateNetworks
     ) {

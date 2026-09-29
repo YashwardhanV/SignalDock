@@ -8,7 +8,6 @@ import dev.signaldock.exception.InvalidRequestException;
 import dev.signaldock.exception.ResourceNotFoundException;
 import dev.signaldock.subscription.EventPatternMatcher;
 import dev.signaldock.subscription.SubscriptionRepository;
-import java.time.Clock;
 import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.UUID;
@@ -17,7 +16,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class EventIngestionService {
-    private final Clock clock;
     private final DeliveryRepository deliveryRepository;
     private final EventPatternMatcher matcher;
     private final EventRepository eventRepository;
@@ -25,14 +23,12 @@ public class EventIngestionService {
     private final SubscriptionRepository subscriptionRepository;
 
     public EventIngestionService(
-            Clock clock,
             DeliveryRepository deliveryRepository,
             EventPatternMatcher matcher,
             EventRepository eventRepository,
             ObjectMapper objectMapper,
             SubscriptionRepository subscriptionRepository
     ) {
-        this.clock = clock;
         this.deliveryRepository = deliveryRepository;
         this.matcher = matcher;
         this.eventRepository = eventRepository;
@@ -44,7 +40,7 @@ public class EventIngestionService {
     public EventDtos.IngestionResponse ingest(String rawIdempotencyKey, EventDtos.CreateRequest request) {
         String idempotencyKey = normalizeIdempotencyKey(rawIdempotencyKey);
         UUID eventId = UUID.randomUUID();
-        Instant now = clock.instant();
+        Instant now = Instant.now();
         int inserted = eventRepository.insertIfAbsent(
                 eventId,
                 request.eventType().trim(),

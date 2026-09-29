@@ -131,8 +131,8 @@ class ApiIntegrationTest {
         jdbcTemplate.update(
                 """
                 insert into deliveries
-                    (id,event_id,endpoint_id,status,attempt_count,max_attempts,next_retry_at,last_error,completed_at,created_at,updated_at,version)
-                values (?,?,?,'DEAD',3,3,?,'HTTP 503',?,?,?,0)
+                    (id,event_id,endpoint_id,status,attempt_count,max_attempts,next_retry_at,last_error,completed_at,created_at,updated_at)
+                values (?,?,?,'DEAD',3,3,?,'HTTP 503',?,?,?)
                 """,
                 deliveryId, eventId, endpointId,
                 Timestamp.from(Instant.now()), Timestamp.from(Instant.now()),

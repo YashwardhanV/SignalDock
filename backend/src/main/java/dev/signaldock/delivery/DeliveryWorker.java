@@ -1,6 +1,5 @@
 package dev.signaldock.delivery;
 
-import java.lang.management.ManagementFactory;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -12,34 +11,27 @@ public class DeliveryWorker {
     private static final Logger log = LoggerFactory.getLogger(DeliveryWorker.class);
 
     private final DeliveryHttpClient httpClient;
-    private final DeliveryProcessingService processingService;
-    private final DeliveryQueueService queueService;
-    private final String workerId = ManagementFactory.getRuntimeMXBean().getName() + "-" + UUID.randomUUID();
+    private final DeliveryWorkerService workerService;
 
-    public DeliveryWorker(
-            DeliveryHttpClient httpClient,
-            DeliveryProcessingService processingService,
-            DeliveryQueueService queueService
-    ) {
+    public DeliveryWorker(DeliveryHttpClient httpClient, DeliveryWorkerService workerService) {
         this.httpClient = httpClient;
-        this.processingService = processingService;
-        this.queueService = queueService;
+        this.workerService = workerService;
     }
 
     @Scheduled(fixedDelayString = "${app.delivery.poll-delay}")
     public void poll() {
-        queueService.claimDue(workerId).forEach(this::process);
+        workerService.claimDue().forEach(this::process);
     }
 
+    // Each workerService call goes through Spring's proxy from this separate bean, so its @Transactional applies.
     private void process(UUID deliveryId) {
         try {
-            processingService.prepare(deliveryId).ifPresent(item -> {
+            workerService.prepare(deliveryId).ifPresent(item -> {
                 DeliveryResult result = httpClient.deliver(item);
-                processingService.recordOutcome(deliveryId, result);
+                workerService.recordOutcome(deliveryId, result);
             });
         } catch (RuntimeException exception) {
             log.error("Unexpected delivery worker failure for {}. The lease will make it recoverable.", deliveryId, exception);
         }
     }
 }
-

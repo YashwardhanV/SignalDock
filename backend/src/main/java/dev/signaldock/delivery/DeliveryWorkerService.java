@@ -3,36 +3,41 @@ package dev.signaldock.delivery;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.signaldock.config.AppProperties;
-import java.time.Clock;
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-public class DeliveryProcessingService {
+public class DeliveryWorkerService {
     private final AppProperties properties;
-    private final Clock clock;
     private final DeliveryAttemptRepository attemptRepository;
     private final DeliveryRepository deliveryRepository;
     private final ObjectMapper objectMapper;
     private final RetryPolicy retryPolicy;
 
-    public DeliveryProcessingService(
+    public DeliveryWorkerService(
             AppProperties properties,
-            Clock clock,
             DeliveryAttemptRepository attemptRepository,
             DeliveryRepository deliveryRepository,
             ObjectMapper objectMapper,
             RetryPolicy retryPolicy
     ) {
         this.properties = properties;
-        this.clock = clock;
         this.attemptRepository = attemptRepository;
         this.deliveryRepository = deliveryRepository;
         this.objectMapper = objectMapper;
         this.retryPolicy = retryPolicy;
+    }
+
+    @Transactional
+    public List<UUID> claimDue() {
+        Instant now = Instant.now();
+        List<Delivery> due = deliveryRepository.lockDueBatch(now, properties.delivery().batchSize());
+        due.forEach(delivery -> delivery.claim(now, properties.delivery().leaseDuration()));
+        return due.stream().map(Delivery::getId).toList();
     }
 
     @Transactional(readOnly = true)
@@ -57,12 +62,7 @@ public class DeliveryProcessingService {
         }
 
         int attemptNumber = delivery.getAttemptCount() + 1;
-        attemptRepository.save(new DeliveryAttempt(
-                delivery,
-                attemptNumber,
-                result,
-                properties.delivery().responseBodyLimit()
-        ));
+        attemptRepository.save(new DeliveryAttempt(delivery, attemptNumber, result));
 
         if (result.successful()) {
             delivery.markDelivered(result.finishedAt());
@@ -71,8 +71,8 @@ public class DeliveryProcessingService {
 
         boolean exhausted = attemptNumber >= delivery.getMaxAttempts();
         Instant next = exhausted
-                ? clock.instant()
-                : clock.instant().plus(retryPolicy.delayAfterAttempt(attemptNumber));
+                ? Instant.now()
+                : Instant.now().plus(retryPolicy.delayAfterAttempt(attemptNumber));
         delivery.markFailedAttempt(result.failureSummary(), next, exhausted);
     }
 
@@ -84,4 +84,3 @@ public class DeliveryProcessingService {
         }
     }
 }
-

@@ -45,19 +45,6 @@ public interface DeliveryRepository extends JpaRepository<Delivery, UUID> {
     @EntityGraph(attributePaths = {"event", "endpoint"})
     Page<Delivery> findAllByStatusOrderByCreatedAtDesc(DeliveryStatus status, Pageable pageable);
 
-    @EntityGraph(attributePaths = {"event", "endpoint"})
-    Page<Delivery> findAllByCreatedAtGreaterThanEqualOrderByCreatedAtDesc(Instant createdAfter, Pageable pageable);
-
-    @EntityGraph(attributePaths = {"event", "endpoint"})
-    Page<Delivery> findAllByStatusAndCreatedAtGreaterThanEqualOrderByCreatedAtDesc(
-            DeliveryStatus status,
-            Instant createdAfter,
-            Pageable pageable
-    );
-
-    @EntityGraph(attributePaths = {"event", "endpoint"})
-    List<Delivery> findByEventIdOrderByCreatedAtAsc(UUID eventId);
-
     long countByStatus(DeliveryStatus status);
 }
 

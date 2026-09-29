@@ -6,20 +6,17 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
-import java.time.Clock;
 import java.time.Instant;
 import org.springframework.stereotype.Component;
 
 @Component
 public class DeliveryHttpClient {
     private final AppProperties properties;
-    private final Clock clock;
     private final HmacSignatureService signatureService;
     private final HttpClient httpClient;
 
-    public DeliveryHttpClient(AppProperties properties, Clock clock, HmacSignatureService signatureService) {
+    public DeliveryHttpClient(AppProperties properties, HmacSignatureService signatureService) {
         this.properties = properties;
-        this.clock = clock;
         this.signatureService = signatureService;
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(properties.delivery().connectTimeout())
@@ -28,7 +25,7 @@ public class DeliveryHttpClient {
     }
 
     public DeliveryResult deliver(DeliveryWorkItem item) {
-        Instant startedAt = clock.instant();
+        Instant startedAt = Instant.now();
         long startedNanos = System.nanoTime();
         String timestamp = Long.toString(startedAt.getEpochSecond());
         String signature = signatureService.sign(item.signingSecret(), timestamp, item.rawPayload());
@@ -67,7 +64,7 @@ public class DeliveryHttpClient {
             long startedNanos
     ) {
         long latencyMs = Math.max(0, (System.nanoTime() - startedNanos) / 1_000_000);
-        return new DeliveryResult(startedAt, clock.instant(), status, body, error, latencyMs);
+        return new DeliveryResult(startedAt, Instant.now(), status, body, error, latencyMs);
     }
 
     public record DeliveryWorkItem(

@@ -53,7 +53,6 @@ app:
     lease-duration: ${APP_DELIVERY_LEASE_DURATION:30s}
     retry-base-delay: ${APP_DELIVERY_RETRY_BASE_DELAY:30s}
     retry-max-delay: ${APP_DELIVERY_RETRY_MAX_DELAY:1h}
-    response-body-limit: ${APP_DELIVERY_RESPONSE_BODY_LIMIT:4000}
     allow-http: ${APP_DELIVERY_ALLOW_HTTP:false}
     allow-private-networks: ${APP_DELIVERY_ALLOW_PRIVATE_NETWORKS:false}
   demo:

@@ -3,7 +3,6 @@ package dev.signaldock.delivery;
 import dev.signaldock.config.PageResponse;
 import dev.signaldock.exception.ConflictException;
 import dev.signaldock.exception.ResourceNotFoundException;
-import java.time.Clock;
 import java.time.Instant;
 import java.util.EnumMap;
 import java.util.Map;
@@ -14,39 +13,24 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-public class DeliveryQueryService {
-    private final Clock clock;
+public class DeliveryService {
     private final DeliveryAttemptRepository attemptRepository;
     private final DeliveryRepository deliveryRepository;
 
-    public DeliveryQueryService(
-            Clock clock,
+    public DeliveryService(
             DeliveryAttemptRepository attemptRepository,
             DeliveryRepository deliveryRepository
     ) {
-        this.clock = clock;
         this.attemptRepository = attemptRepository;
         this.deliveryRepository = deliveryRepository;
     }
 
     @Transactional(readOnly = true)
-    public PageResponse<DeliveryDtos.Response> list(
-            DeliveryStatus status,
-            Instant createdAfter,
-            int page,
-            int size
-    ) {
+    public PageResponse<DeliveryDtos.Response> list(DeliveryStatus status, int page, int size) {
         PageRequest pageable = PageRequest.of(page, size);
-        Page<Delivery> deliveries;
-        if (status != null && createdAfter != null) {
-            deliveries = deliveryRepository.findAllByStatusAndCreatedAtGreaterThanEqualOrderByCreatedAtDesc(status, createdAfter, pageable);
-        } else if (status != null) {
-            deliveries = deliveryRepository.findAllByStatusOrderByCreatedAtDesc(status, pageable);
-        } else if (createdAfter != null) {
-            deliveries = deliveryRepository.findAllByCreatedAtGreaterThanEqualOrderByCreatedAtDesc(createdAfter, pageable);
-        } else {
-            deliveries = deliveryRepository.findAllByOrderByCreatedAtDesc(pageable);
-        }
+        Page<Delivery> deliveries = status == null
+                ? deliveryRepository.findAllByOrderByCreatedAtDesc(pageable)
+                : deliveryRepository.findAllByStatusOrderByCreatedAtDesc(status, pageable);
         return PageResponse.from(deliveries, DeliveryDtos.Response::from);
     }
 
@@ -70,7 +54,7 @@ public class DeliveryQueryService {
         if (!delivery.getEndpoint().isActive()) {
             throw new ConflictException("Activate the endpoint before retrying this delivery.");
         }
-        delivery.requeue(delivery.getEndpoint().getMaxAttempts(), clock.instant());
+        delivery.requeue(delivery.getEndpoint().getMaxAttempts(), Instant.now());
         return DeliveryDtos.Response.from(delivery);
     }
 

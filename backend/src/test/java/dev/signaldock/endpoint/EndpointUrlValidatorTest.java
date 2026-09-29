@@ -46,7 +46,6 @@ class EndpointUrlValidatorTest {
                         Duration.ofSeconds(30),
                         Duration.ofSeconds(1),
                         Duration.ofMinutes(1),
-                        4000,
                         allowHttp,
                         allowPrivate
                 ),

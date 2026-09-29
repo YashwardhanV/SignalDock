@@ -14,20 +14,20 @@ class DeliveryStateTest {
     @Test
     void failedAttemptMovesToRetryPendingBeforeBudgetIsExhausted() {
         Delivery delivery = delivery(3);
-        delivery.claim("worker-1", NOW, Duration.ofSeconds(30));
+        delivery.claim(NOW, Duration.ofSeconds(30));
 
         delivery.markFailedAttempt("HTTP 503", NOW.plusSeconds(30), false);
 
         assertThat(delivery.getStatus()).isEqualTo(DeliveryStatus.RETRY_PENDING);
         assertThat(delivery.getAttemptCount()).isEqualTo(1);
         assertThat(delivery.getNextRetryAt()).isEqualTo(NOW.plusSeconds(30));
-        assertThat(delivery.getClaimedBy()).isNull();
+        assertThat(delivery.getLeaseUntil()).isNull();
     }
 
     @Test
     void exhaustedAttemptMovesToDeadState() {
         Delivery delivery = delivery(1);
-        delivery.claim("worker-1", NOW, Duration.ofSeconds(30));
+        delivery.claim(NOW, Duration.ofSeconds(30));
 
         delivery.markFailedAttempt("timeout", NOW, true);
 
@@ -39,9 +39,9 @@ class DeliveryStateTest {
     @Test
     void manualRetryAddsACompleteAttemptBudgetWithoutErasingHistory() {
         Delivery delivery = delivery(2);
-        delivery.claim("worker-1", NOW, Duration.ofSeconds(30));
+        delivery.claim(NOW, Duration.ofSeconds(30));
         delivery.markFailedAttempt("HTTP 503", NOW, false);
-        delivery.claim("worker-1", NOW, Duration.ofSeconds(30));
+        delivery.claim(NOW, Duration.ofSeconds(30));
         delivery.markFailedAttempt("HTTP 503", NOW, true);
 
         delivery.requeue(2, NOW.plusSeconds(1));

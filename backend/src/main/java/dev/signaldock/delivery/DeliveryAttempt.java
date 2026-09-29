@@ -13,6 +13,8 @@ import java.util.UUID;
 @Entity
 @Table(name = "delivery_attempts")
 public class DeliveryAttempt {
+    static final int MAX_TEXT_LENGTH = 4000; // matches VARCHAR(4000) columns
+
     @Id
     private UUID id;
 
@@ -44,23 +46,20 @@ public class DeliveryAttempt {
     protected DeliveryAttempt() {
     }
 
-    public DeliveryAttempt(Delivery delivery, int attemptNumber, DeliveryResult result, int textLimit) {
+    public DeliveryAttempt(Delivery delivery, int attemptNumber, DeliveryResult result) {
         this.id = UUID.randomUUID();
         this.delivery = delivery;
         this.attemptNumber = attemptNumber;
         this.startedAt = result.startedAt();
         this.finishedAt = result.finishedAt();
         this.httpStatus = result.httpStatus();
-        this.responseBody = truncate(result.responseBody(), textLimit);
-        this.errorMessage = truncate(result.errorMessage(), textLimit);
+        this.responseBody = truncate(result.responseBody());
+        this.errorMessage = truncate(result.errorMessage());
         this.latencyMs = result.latencyMs();
     }
 
-    private String truncate(String value, int limit) {
-        if (value == null || value.length() <= limit) {
-            return value;
-        }
-        return value.substring(0, limit);
+    static String truncate(String value) {
+        return value == null || value.length() <= MAX_TEXT_LENGTH ? value : value.substring(0, MAX_TEXT_LENGTH);
     }
 
     public UUID getId() {

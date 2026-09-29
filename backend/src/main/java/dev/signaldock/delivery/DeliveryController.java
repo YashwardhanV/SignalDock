@@ -3,7 +3,6 @@ package dev.signaldock.delivery;
 import dev.signaldock.config.PageResponse;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
-import java.time.Instant;
 import java.util.UUID;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -17,20 +16,19 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/v1")
 public class DeliveryController {
-    private final DeliveryQueryService deliveryService;
+    private final DeliveryService deliveryService;
 
-    public DeliveryController(DeliveryQueryService deliveryService) {
+    public DeliveryController(DeliveryService deliveryService) {
         this.deliveryService = deliveryService;
     }
 
     @GetMapping("/deliveries")
     PageResponse<DeliveryDtos.Response> list(
             @RequestParam(required = false) DeliveryStatus status,
-            @RequestParam(required = false) Instant createdAfter,
             @RequestParam(defaultValue = "0") @Min(0) int page,
             @RequestParam(defaultValue = "20") @Min(1) @Max(200) int size
     ) {
-        return deliveryService.list(status, createdAfter, page, size);
+        return deliveryService.list(status, page, size);
     }
 
     @GetMapping("/deliveries/{deliveryId}")
