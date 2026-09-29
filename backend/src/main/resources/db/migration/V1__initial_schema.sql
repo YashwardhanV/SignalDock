@@ -1,12 +1,3 @@
-CREATE TABLE api_keys (
-    id UUID PRIMARY KEY,
-    name VARCHAR(120) NOT NULL,
-    key_hash VARCHAR(64) NOT NULL UNIQUE,
-    active BOOLEAN NOT NULL DEFAULT TRUE,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    revoked_at TIMESTAMPTZ
-);
-
 CREATE TABLE webhook_endpoints (
     id UUID PRIMARY KEY,
     name VARCHAR(120) NOT NULL,
@@ -15,13 +6,8 @@ CREATE TABLE webhook_endpoints (
     active BOOLEAN NOT NULL DEFAULT TRUE,
     max_attempts INTEGER NOT NULL DEFAULT 5 CHECK (max_attempts BETWEEN 1 AND 12),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    version BIGINT NOT NULL DEFAULT 0
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
-
-CREATE UNIQUE INDEX uq_active_endpoint_url
-    ON webhook_endpoints (lower(url))
-    WHERE active = TRUE;
 
 CREATE TABLE endpoint_subscriptions (
     id UUID PRIMARY KEY,
@@ -29,15 +15,8 @@ CREATE TABLE endpoint_subscriptions (
     event_pattern VARCHAR(160) NOT NULL,
     active BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    CONSTRAINT ck_event_pattern_format CHECK (event_pattern ~ '^[a-zA-Z0-9_-]+(\.[a-zA-Z0-9_*-]+)*$')
+    CONSTRAINT uq_subscription_endpoint_pattern UNIQUE (endpoint_id, event_pattern)
 );
-
-CREATE UNIQUE INDEX uq_subscription_endpoint_pattern
-    ON endpoint_subscriptions (endpoint_id, lower(event_pattern));
-
-CREATE INDEX idx_active_subscriptions
-    ON endpoint_subscriptions (active, endpoint_id)
-    WHERE active = TRUE;
 
 CREATE TABLE events (
     id UUID PRIMARY KEY,
@@ -48,7 +27,6 @@ CREATE TABLE events (
 );
 
 CREATE INDEX idx_events_created_at ON events (created_at DESC);
-CREATE INDEX idx_events_type_created_at ON events (event_type, created_at DESC);
 
 CREATE TABLE deliveries (
     id UUID PRIMARY KEY,
@@ -59,25 +37,18 @@ CREATE TABLE deliveries (
     max_attempts INTEGER NOT NULL CHECK (max_attempts >= 1),
     next_retry_at TIMESTAMPTZ NOT NULL,
     lease_until TIMESTAMPTZ,
-    claimed_by VARCHAR(120),
     last_error TEXT,
     completed_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    version BIGINT NOT NULL DEFAULT 0,
     CONSTRAINT uq_delivery_event_endpoint UNIQUE (event_id, endpoint_id),
     CONSTRAINT ck_delivery_status CHECK (status IN ('PENDING', 'PROCESSING', 'RETRY_PENDING', 'DELIVERED', 'DEAD'))
 );
 
-CREATE INDEX idx_delivery_queue
-    ON deliveries (next_retry_at, created_at)
-    WHERE status IN ('PENDING', 'RETRY_PENDING');
-
-CREATE INDEX idx_delivery_expired_leases
-    ON deliveries (lease_until)
-    WHERE status = 'PROCESSING';
-
-CREATE INDEX idx_deliveries_status_created_at ON deliveries (status, created_at DESC);
+-- Used by the worker's claim query (status + due time).
+CREATE INDEX idx_deliveries_status_next_retry ON deliveries (status, next_retry_at);
+-- Used by the dashboard list (newest first).
+CREATE INDEX idx_deliveries_created_at ON deliveries (created_at DESC);
 
 CREATE TABLE delivery_attempts (
     id UUID PRIMARY KEY,
@@ -89,8 +60,6 @@ CREATE TABLE delivery_attempts (
     response_body VARCHAR(4000),
     error_message VARCHAR(4000),
     latency_ms BIGINT NOT NULL CHECK (latency_ms >= 0),
+    -- Also serves as the index for "attempts of a delivery, in order".
     CONSTRAINT uq_delivery_attempt_number UNIQUE (delivery_id, attempt_number)
 );
-
-CREATE INDEX idx_attempts_delivery_started_at
-    ON delivery_attempts (delivery_id, started_at DESC);

@@ -57,6 +57,8 @@ Other useful URLs:
 
 Stop with `docker compose down`. Add `-v` only when you intentionally want to delete the local demo database.
 
+If you ran an older version, reset once with `docker compose down -v` (the initial migration was simplified).
+
 ## API examples
 
 All normal APIs require `X-API-Key`. Event ingestion also requires `Idempotency-Key`.
