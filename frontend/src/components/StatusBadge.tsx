@@ -9,6 +9,9 @@ const LABELS: Record<DeliveryStatus, string> = {
 };
 
 export function StatusBadge({ status }: { status: DeliveryStatus }) {
-  return <span className={`status-pill status-${status.toLowerCase()}`}>{LABELS[status]}</span>;
+  return (
+    <span className={`status-pill status-${status.toLowerCase()}`}>
+      {LABELS[status]}
+    </span>
+  );
 }
-

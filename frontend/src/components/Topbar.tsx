@@ -25,18 +25,42 @@ export function Topbar({
     <header className="topbar">
       <div className="connection-state">
         <span className={connected ? "pulse-dot online" : "pulse-dot"} />
-        <div><strong>{connected ? "Console connected" : "Connect your console"}</strong><span>{connected ? "Live data refreshes every 4 seconds" : "Use the demo key from README"}</span></div>
+        <div>
+          <strong>
+            {connected ? "Console connected" : "Connect your console"}
+          </strong>
+          <span>
+            {connected
+              ? "Live data refreshes every 4 seconds"
+              : "Use the demo key from README"}
+          </span>
+        </div>
       </div>
       <form className="key-form" onSubmit={submit}>
         <KeyRound size={16} aria-hidden="true" />
-        <label className="sr-only" htmlFor="api-key">API key</label>
-        <input id="api-key" onChange={(event) => setDraft(event.target.value)} placeholder="X-API-Key" type="password" value={draft} />
-        <button className="button button-dark" type="submit">Connect</button>
+        <label className="sr-only" htmlFor="api-key">
+          API key
+        </label>
+        <input
+          id="api-key"
+          onChange={(event) => setDraft(event.target.value)}
+          placeholder="X-API-Key"
+          type="password"
+          value={draft}
+        />
+        <button className="button button-dark" type="submit">
+          Connect
+        </button>
       </form>
-      <button aria-label="Refresh dashboard" className="icon-button" disabled={busy || !apiKey} onClick={onRefresh} type="button">
+      <button
+        aria-label="Refresh dashboard"
+        className="icon-button"
+        disabled={busy || !apiKey}
+        onClick={onRefresh}
+        type="button"
+      >
         <RefreshCw className={busy ? "spin" : ""} size={18} />
       </button>
     </header>
   );
 }
-

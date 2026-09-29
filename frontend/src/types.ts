@@ -1,4 +1,9 @@
-export type DeliveryStatus = "PENDING" | "PROCESSING" | "RETRY_PENDING" | "DELIVERED" | "DEAD";
+export type DeliveryStatus =
+  | "PENDING"
+  | "PROCESSING"
+  | "RETRY_PENDING"
+  | "DELIVERED"
+  | "DEAD";
 
 export type Page<T> = {
   content: T[];
@@ -83,4 +88,3 @@ export type Snapshot = {
   events: EventRecord[];
   deliveries: Delivery[];
 };
-
