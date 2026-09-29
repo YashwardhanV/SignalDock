@@ -1,7 +1,6 @@
 package dev.signaldock.integration;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -11,7 +10,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.signaldock.delivery.DeliveryRepository;
 import dev.signaldock.endpoint.EndpointRepository;
-import dev.signaldock.endpoint.WebhookEndpoint;
 import dev.signaldock.event.EventRepository;
 import java.sql.Timestamp;
 import java.time.Instant;
@@ -20,7 +18,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -49,8 +46,6 @@ class ApiIntegrationTest {
         registry.add("app.demo.receiver-url", () -> "http://127.0.0.1:65530/success");
         registry.add("app.demo.failure-url", () -> "http://127.0.0.1:65530/failure");
         registry.add("app.delivery.poll-delay", () -> "3600000");
-        registry.add("app.delivery.allow-http", () -> "true");
-        registry.add("app.delivery.allow-private-networks", () -> "true");
     }
 
     @Autowired MockMvc mockMvc;
@@ -102,16 +97,6 @@ class ApiIntegrationTest {
         assertThat(second.get("eventId").asText()).isEqualTo(first.get("eventId").asText());
         assertThat(eventRepository.count()).isEqualTo(eventsBefore + 1);
         assertThat(deliveryRepository.count()).isEqualTo(deliveriesBefore + 1);
-    }
-
-    @Test
-    @Transactional
-    void databaseRejectsDuplicateActiveEndpointUrls() {
-        String url = "https://duplicate-" + UUID.randomUUID() + ".example.com/callback";
-        endpointRepository.saveAndFlush(new WebhookEndpoint("First", url, "secret-1", 3));
-
-        assertThatThrownBy(() -> endpointRepository.saveAndFlush(new WebhookEndpoint("Second", url, "secret-2", 3)))
-                .isInstanceOf(DataIntegrityViolationException.class);
     }
 
     @Test

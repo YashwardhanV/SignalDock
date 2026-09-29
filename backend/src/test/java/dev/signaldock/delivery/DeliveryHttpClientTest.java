@@ -82,9 +82,7 @@ class DeliveryHttpClientTest {
                         Duration.ofSeconds(1),
                         Duration.ofSeconds(30),
                         Duration.ofSeconds(1),
-                        Duration.ofMinutes(1),
-                        true,
-                        true
+                        Duration.ofMinutes(1)
                 ),
                 new AppProperties.Demo(false, "", "")
         );

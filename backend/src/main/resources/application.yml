@@ -53,8 +53,6 @@ app:
     lease-duration: ${APP_DELIVERY_LEASE_DURATION:30s}
     retry-base-delay: ${APP_DELIVERY_RETRY_BASE_DELAY:30s}
     retry-max-delay: ${APP_DELIVERY_RETRY_MAX_DELAY:1h}
-    allow-http: ${APP_DELIVERY_ALLOW_HTTP:false}
-    allow-private-networks: ${APP_DELIVERY_ALLOW_PRIVATE_NETWORKS:false}
   demo:
     enabled: false
     receiver-url: ${APP_DEMO_RECEIVER_URL:http://localhost:8080/api/v1/demo/receiver/success}

@@ -6,7 +6,6 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import java.net.URI;
 import java.util.UUID;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -22,12 +21,10 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/v1/events")
 public class EventController {
-    private final EventIngestionService ingestionService;
-    private final EventRepository eventRepository;
+    private final EventService eventService;
 
-    public EventController(EventIngestionService ingestionService, EventRepository eventRepository) {
-        this.ingestionService = ingestionService;
-        this.eventRepository = eventRepository;
+    public EventController(EventService eventService) {
+        this.eventService = eventService;
     }
 
     @PostMapping
@@ -35,7 +32,7 @@ public class EventController {
             @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
             @Valid @RequestBody EventDtos.CreateRequest request
     ) {
-        EventDtos.IngestionResponse response = ingestionService.ingest(idempotencyKey, request);
+        EventDtos.IngestionResponse response = eventService.ingest(idempotencyKey, request);
         if (response.duplicate()) {
             return ResponseEntity.ok(response);
         }
@@ -47,15 +44,12 @@ public class EventController {
             @RequestParam(defaultValue = "0") @Min(0) int page,
             @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size
     ) {
-        return PageResponse.from(
-                eventRepository.findAllByOrderByCreatedAtDesc(PageRequest.of(page, size)),
-                EventDtos.Response::from
-        );
+        return eventService.list(page, size);
     }
 
     @GetMapping("/{eventId}")
     EventDtos.Response get(@PathVariable UUID eventId) {
-        return ingestionService.get(eventId);
+        return eventService.get(eventId);
     }
 }
 

@@ -63,7 +63,7 @@ export function EndpointsView({ apiKey, endpoints, subscriptions, onChanged }: {
         </article>
         <div className="right-stack">
           <article className="surface form-surface">
-            <div className="section-heading"><span className="section-icon"><Plus size={17} /></span><div><h2>Register endpoint</h2><p>HTTPS is required outside demo mode.</p></div></div>
+            <div className="section-heading"><span className="section-icon"><Plus size={17} /></span><div><h2>Register endpoint</h2><p>Must be an http or https URL.</p></div></div>
             <form className="stack-form" onSubmit={addEndpoint}>
               <label><span>Name</span><input onChange={(event) => setName(event.target.value)} value={name} /></label>
               <label><span>Callback URL</span><input onChange={(event) => setUrl(event.target.value)} value={url} /></label>

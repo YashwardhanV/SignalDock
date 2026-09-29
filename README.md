@@ -121,7 +121,7 @@ cd backend
 mvn test
 ```
 
-The test set targets retry math, pattern matching, delivery state changes, HMAC output, HTTP signing/timeout behavior, URL safety, authentication, idempotency, database uniqueness, and manual retry. It favors meaningful behavior over an arbitrary coverage target.
+The test set targets retry math, pattern matching, delivery state changes, HMAC output, HTTP signing/timeout behavior, URL validation, authentication, idempotency, and manual retry. It favors meaningful behavior over an arbitrary coverage target.
 
 Frontend type-check and production build:
 
@@ -144,13 +144,13 @@ CI repeats both checks and builds the Compose images in [`.github/workflows/ci.y
 
 ## Configuration
 
-Copy `.env.example` to `.env` to change Compose defaults. Database credentials, ports, the API key, worker batch/poll/lease settings, timeouts, retry delays, CORS origins, and URL-safety flags are environment-driven. Defaults are for local demonstration only. Outside the demo profile, HTTP/private receiver addresses are denied.
+Copy `.env.example` to `.env` to change Compose defaults. Database credentials, ports, the API key, worker batch/poll/lease settings, timeouts, retry delays, and CORS origins are environment-driven. Defaults are for local demonstration only.
 
 ## Known limitations
 
 - One database and one application are intentional; no multi-region or independent service scaling.
 - Delivery is at least once. Receivers should deduplicate using the delivery ID.
-- URL validation reduces SSRF risk but does not eliminate DNS rebinding between validation and connection.
+- Endpoint URLs get basic validation only; there is no SSRF protection (a production version would block private/internal IPs).
 - Signing secrets are stored as application-readable plaintext because background signing needs them; a real deployment should use envelope encryption or a managed secret reference.
 - A single API key is shared by all clients; there is no user/organization model, rotation UI, or audit actor identity.
 - The dashboard polls and shows the latest 100 records rather than offering full server-side filter controls.

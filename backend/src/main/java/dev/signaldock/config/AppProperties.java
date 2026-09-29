@@ -18,9 +18,7 @@ public record AppProperties(
             Duration pollDelay,
             Duration leaseDuration,
             Duration retryBaseDelay,
-            Duration retryMaxDelay,
-            boolean allowHttp,
-            boolean allowPrivateNetworks
+            Duration retryMaxDelay
     ) {
     }
 

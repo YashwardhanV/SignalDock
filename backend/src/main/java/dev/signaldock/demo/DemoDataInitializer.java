@@ -31,33 +31,25 @@ public class DemoDataInitializer implements ApplicationRunner {
     @Override
     @Transactional
     public void run(ApplicationArguments args) {
-        WebhookEndpoint success = endpoint(
+        if (endpointRepository.count() > 0) {
+            return;
+        }
+
+        WebhookEndpoint success = endpointRepository.save(new WebhookEndpoint(
                 "Demo receiver",
                 properties.demo().receiverUrl(),
                 "demo-success-signing-secret",
                 5
-        );
-        subscribe(success, "order.created");
-        subscribe(success, "benchmark.delivery");
+        ));
+        subscriptionRepository.save(new EndpointSubscription(success, "order.created"));
+        subscriptionRepository.save(new EndpointSubscription(success, "benchmark.delivery"));
 
-        WebhookEndpoint failure = endpoint(
+        WebhookEndpoint failure = endpointRepository.save(new WebhookEndpoint(
                 "Retry lab",
                 properties.demo().failureUrl(),
                 "demo-failure-signing-secret",
                 3
-        );
-        subscribe(failure, "benchmark.retry");
-    }
-
-    private WebhookEndpoint endpoint(String name, String url, String secret, int attempts) {
-        return endpointRepository.findByUrlIgnoreCaseAndActiveTrue(url)
-                .orElseGet(() -> endpointRepository.save(new WebhookEndpoint(name, url, secret, attempts)));
-    }
-
-    private void subscribe(WebhookEndpoint endpoint, String pattern) {
-        if (!subscriptionRepository.existsByEndpointIdAndEventPatternIgnoreCase(endpoint.getId(), pattern)) {
-            subscriptionRepository.save(new EndpointSubscription(endpoint, pattern));
-        }
+        ));
+        subscriptionRepository.save(new EndpointSubscription(failure, "benchmark.retry"));
     }
 }
-

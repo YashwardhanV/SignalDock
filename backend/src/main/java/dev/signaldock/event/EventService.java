@@ -2,6 +2,7 @@ package dev.signaldock.event;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import dev.signaldock.config.PageResponse;
 import dev.signaldock.delivery.Delivery;
 import dev.signaldock.delivery.DeliveryRepository;
 import dev.signaldock.exception.InvalidRequestException;
@@ -11,18 +12,19 @@ import dev.signaldock.subscription.SubscriptionRepository;
 import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.UUID;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-public class EventIngestionService {
+public class EventService {
     private final DeliveryRepository deliveryRepository;
     private final EventPatternMatcher matcher;
     private final EventRepository eventRepository;
     private final ObjectMapper objectMapper;
     private final SubscriptionRepository subscriptionRepository;
 
-    public EventIngestionService(
+    public EventService(
             DeliveryRepository deliveryRepository,
             EventPatternMatcher matcher,
             EventRepository eventRepository,
@@ -70,6 +72,14 @@ public class EventIngestionService {
                 .toList();
         deliveryRepository.saveAll(deliveries);
         return response(event, deliveries.size(), false);
+    }
+
+    @Transactional(readOnly = true)
+    public PageResponse<EventDtos.Response> list(int page, int size) {
+        return PageResponse.from(
+                eventRepository.findAllByOrderByCreatedAtDesc(PageRequest.of(page, size)),
+                EventDtos.Response::from
+        );
     }
 
     @Transactional(readOnly = true)

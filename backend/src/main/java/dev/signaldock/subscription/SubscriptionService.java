@@ -4,6 +4,7 @@ import dev.signaldock.endpoint.EndpointRepository;
 import dev.signaldock.exception.ConflictException;
 import dev.signaldock.exception.ResourceNotFoundException;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,9 +29,9 @@ public class SubscriptionService {
     public SubscriptionDtos.Response create(UUID endpointId, SubscriptionDtos.CreateRequest request) {
         var endpoint = endpointRepository.findByIdAndActiveTrue(endpointId)
                 .orElseThrow(() -> new ResourceNotFoundException("Active endpoint not found: " + endpointId));
-        String pattern = request.eventPattern().trim();
+        String pattern = request.eventPattern().trim().toLowerCase(Locale.ROOT);
         matcher.validate(pattern);
-        if (subscriptionRepository.existsByEndpointIdAndEventPatternIgnoreCase(endpointId, pattern)) {
+        if (subscriptionRepository.existsByEndpointIdAndEventPattern(endpointId, pattern)) {
             throw new ConflictException("This endpoint already has that event pattern.");
         }
         return SubscriptionDtos.Response.from(subscriptionRepository.save(new EndpointSubscription(endpoint, pattern)));

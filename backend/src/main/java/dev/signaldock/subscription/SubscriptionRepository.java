@@ -14,7 +14,7 @@ public interface SubscriptionRepository extends JpaRepository<EndpointSubscripti
     @EntityGraph(attributePaths = "endpoint")
     Optional<EndpointSubscription> findByIdAndActiveTrue(UUID id);
 
-    boolean existsByEndpointIdAndEventPatternIgnoreCase(UUID endpointId, String eventPattern);
+    boolean existsByEndpointIdAndEventPattern(UUID endpointId, String eventPattern);
 
     @Query("""
             select subscription

@@ -1,10 +1,9 @@
-package dev.signaldock.event;
+package dev.signaldock.subscription;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import dev.signaldock.exception.InvalidRequestException;
-import dev.signaldock.subscription.EventPatternMatcher;
 import org.junit.jupiter.api.Test;
 
 class EventPatternMatcherTest {
