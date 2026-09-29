@@ -6,7 +6,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @ConfigurationProperties(prefix = "app")
 public record AppProperties(
-        String adminKey,
+        String apiKey,
         List<String> corsAllowedOrigins,
         Delivery delivery,
         Demo demo
@@ -27,7 +27,6 @@ public record AppProperties(
 
     public record Demo(
             boolean enabled,
-            String apiKey,
             String receiverUrl,
             String failureUrl
     ) {

@@ -88,7 +88,7 @@ class DeliveryHttpClientTest {
                         true,
                         true
                 ),
-                new AppProperties.Demo(false, "key", "", "")
+                new AppProperties.Demo(false, "", "")
         );
         return new DeliveryHttpClient(properties, Clock.systemUTC(), new HmacSignatureService());
     }

@@ -45,7 +45,7 @@ class ApiIntegrationTest {
         registry.add("spring.datasource.username", POSTGRES::getUsername);
         registry.add("spring.datasource.password", POSTGRES::getPassword);
         registry.add("app.demo.enabled", () -> "true");
-        registry.add("app.demo.api-key", () -> API_KEY);
+        registry.add("app.api-key", () -> API_KEY);
         registry.add("app.demo.receiver-url", () -> "http://127.0.0.1:65530/success");
         registry.add("app.demo.failure-url", () -> "http://127.0.0.1:65530/failure");
         registry.add("app.delivery.poll-delay", () -> "3600000");

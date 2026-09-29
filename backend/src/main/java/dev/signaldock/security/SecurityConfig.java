@@ -1,6 +1,7 @@
 package dev.signaldock.security;
 
 import dev.signaldock.config.AppProperties;
+import java.util.Arrays;
 import java.util.List;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -26,9 +27,8 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        .requestMatchers("/actuator/health/**", "/docs/**", "/swagger-ui/**", "/api-docs/**").permitAll()
-                        .requestMatchers("/api/v1/admin/api-keys/**").permitAll()
-                        .requestMatchers("/api/v1/demo/receiver/**").permitAll()
+                        .requestMatchers(Arrays.stream(ApiKeyAuthenticationFilter.PUBLIC_PATHS)
+                                .map(path -> path + "/**").toArray(String[]::new)).permitAll()
                         .anyRequest().authenticated())
                 .addFilterBefore(apiKeyAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();

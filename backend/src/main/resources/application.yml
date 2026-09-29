@@ -42,7 +42,7 @@ springdoc:
     path: /api-docs
 
 app:
-  admin-key: ${APP_ADMIN_KEY:local-admin-key}
+  api-key: ${APP_API_KEY:sd_demo_local_key}
   cors-allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:5173}
   delivery:
     connect-timeout: ${APP_DELIVERY_CONNECT_TIMEOUT:2s}
@@ -58,7 +58,6 @@ app:
     allow-private-networks: ${APP_DELIVERY_ALLOW_PRIVATE_NETWORKS:false}
   demo:
     enabled: false
-    api-key: ${APP_DEMO_API_KEY:sd_demo_local_key}
     receiver-url: ${APP_DEMO_RECEIVER_URL:http://localhost:8080/api/v1/demo/receiver/success}
     failure-url: ${APP_DEMO_FAILURE_URL:http://localhost:8080/api/v1/demo/receiver/failure}
 

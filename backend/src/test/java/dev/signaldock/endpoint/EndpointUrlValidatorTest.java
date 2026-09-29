@@ -50,7 +50,7 @@ class EndpointUrlValidatorTest {
                         allowHttp,
                         allowPrivate
                 ),
-                new AppProperties.Demo(false, "key", "http://localhost", "http://localhost")
+                new AppProperties.Demo(false, "http://localhost", "http://localhost")
         );
     }
 }

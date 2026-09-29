@@ -17,7 +17,7 @@ SignalDock is a small event callback delivery platform built to demonstrate stro
 - HMAC-SHA256 signatures over `timestamp.rawPayload` with event/delivery identity headers.
 - Configurable connection/read timeouts, exponential backoff, terminal `DEAD` state, full attempt history, response truncation, and manual retry.
 - Paginated DTO-based REST APIs, bean validation, central error responses, request IDs, health endpoint, and OpenAPI UI.
-- Hash-only API-key authentication and admin-controlled one-time key creation.
+- API-key authentication with a single configured key (`APP_API_KEY`).
 - Responsive React/TypeScript/Tailwind console with live summary, event composer, endpoint routes, attempt timeline, and retry action.
 - Flyway migrations, JUnit 5 unit tests, PostgreSQL Testcontainers integration tests, Docker Compose, seed data, and GitHub Actions CI.
 
@@ -70,15 +70,6 @@ curl -i -X POST http://localhost:8080/api/v1/events \
 ```
 
 The first request returns `201 Created`; repeating the same request/key returns `200 OK`, the same `eventId`, and `duplicate: true`.
-
-Create a non-demo API key (the raw key is returned once):
-
-```bash
-curl -X POST http://localhost:8080/api/v1/admin/api-keys \
-  -H "Content-Type: application/json" \
-  -H "X-Admin-Key: local-admin-key" \
-  -d '{"name":"portfolio-client"}'
-```
 
 Create a receiver and route:
 
@@ -153,7 +144,7 @@ CI repeats both checks and builds the Compose images in [`.github/workflows/ci.y
 
 ## Configuration
 
-Copy `.env.example` to `.env` to change Compose defaults. Database credentials, ports, admin/demo keys, worker batch/poll/lease settings, timeouts, retry delays, response limit, CORS origins, and URL-safety flags are environment-driven. Defaults are for local demonstration only. Outside the demo profile, HTTP/private receiver addresses are denied.
+Copy `.env.example` to `.env` to change Compose defaults. Database credentials, ports, the API key, worker batch/poll/lease settings, timeouts, retry delays, response limit, CORS origins, and URL-safety flags are environment-driven. Defaults are for local demonstration only. Outside the demo profile, HTTP/private receiver addresses are denied.
 
 ## Known limitations
 
@@ -161,7 +152,7 @@ Copy `.env.example` to `.env` to change Compose defaults. Database credentials, 
 - Delivery is at least once. Receivers should deduplicate using the delivery ID.
 - URL validation reduces SSRF risk but does not eliminate DNS rebinding between validation and connection.
 - Signing secrets are stored as application-readable plaintext because background signing needs them; a real deployment should use envelope encryption or a managed secret reference.
-- API keys are global rather than tenant-scoped; there is no user/organization model, rotation UI, or audit actor identity.
+- A single API key is shared by all clients; there is no user/organization model, rotation UI, or audit actor identity.
 - The dashboard polls and shows the latest 100 records rather than offering full server-side filter controls.
 - The in-process scheduler has no admission/rate policy per destination.
 

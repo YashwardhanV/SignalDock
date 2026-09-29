@@ -3,9 +3,6 @@ package dev.signaldock.demo;
 import dev.signaldock.config.AppProperties;
 import dev.signaldock.endpoint.EndpointRepository;
 import dev.signaldock.endpoint.WebhookEndpoint;
-import dev.signaldock.security.ApiKey;
-import dev.signaldock.security.ApiKeyHasher;
-import dev.signaldock.security.ApiKeyRepository;
 import dev.signaldock.subscription.EndpointSubscription;
 import dev.signaldock.subscription.SubscriptionRepository;
 import org.springframework.boot.ApplicationArguments;
@@ -17,21 +14,15 @@ import org.springframework.transaction.annotation.Transactional;
 @Component
 @ConditionalOnProperty(name = "app.demo.enabled", havingValue = "true")
 public class DemoDataInitializer implements ApplicationRunner {
-    private final ApiKeyHasher apiKeyHasher;
-    private final ApiKeyRepository apiKeyRepository;
     private final AppProperties properties;
     private final EndpointRepository endpointRepository;
     private final SubscriptionRepository subscriptionRepository;
 
     public DemoDataInitializer(
-            ApiKeyHasher apiKeyHasher,
-            ApiKeyRepository apiKeyRepository,
             AppProperties properties,
             EndpointRepository endpointRepository,
             SubscriptionRepository subscriptionRepository
     ) {
-        this.apiKeyHasher = apiKeyHasher;
-        this.apiKeyRepository = apiKeyRepository;
         this.properties = properties;
         this.endpointRepository = endpointRepository;
         this.subscriptionRepository = subscriptionRepository;
@@ -40,11 +31,6 @@ public class DemoDataInitializer implements ApplicationRunner {
     @Override
     @Transactional
     public void run(ApplicationArguments args) {
-        String keyHash = apiKeyHasher.hash(properties.demo().apiKey());
-        if (!apiKeyRepository.existsByKeyHash(keyHash)) {
-            apiKeyRepository.save(new ApiKey("Local demo key", keyHash));
-        }
-
         WebhookEndpoint success = endpoint(
                 "Demo receiver",
                 properties.demo().receiverUrl(),

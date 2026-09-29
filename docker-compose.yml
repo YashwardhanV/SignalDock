@@ -26,8 +26,7 @@ services:
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-signaldock}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-signaldock}
       SPRING_PROFILES_ACTIVE: demo
-      APP_ADMIN_KEY: ${APP_ADMIN_KEY:-local-admin-key}
-      APP_DEMO_API_KEY: ${DEMO_API_KEY:-sd_demo_local_key}
+      APP_API_KEY: ${APP_API_KEY:-sd_demo_local_key}
       APP_DEMO_RECEIVER_URL: http://backend:8080/api/v1/demo/receiver/success
       APP_DEMO_FAILURE_URL: http://backend:8080/api/v1/demo/receiver/failure
       APP_DELIVERY_ALLOW_HTTP: "true"

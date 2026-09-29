@@ -1,15 +1,17 @@
 package dev.signaldock.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import dev.signaldock.config.AppProperties;
 import dev.signaldock.exception.ApiError;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.time.Instant;
-import java.util.Map;
-import org.springframework.http.HttpHeaders;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.util.Arrays;
+import java.util.List;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -21,69 +23,40 @@ import org.springframework.web.filter.OncePerRequestFilter;
 @Component
 public class ApiKeyAuthenticationFilter extends OncePerRequestFilter {
     public static final String HEADER = "X-API-Key";
+    public static final String[] PUBLIC_PATHS = {
+            "/actuator/health", "/docs", "/swagger-ui", "/api-docs", "/api/v1/demo/receiver"
+    };
 
-    private final ApiKeyHasher apiKeyHasher;
-    private final ApiKeyRepository apiKeyRepository;
+    private final byte[] expectedKey;
     private final ObjectMapper objectMapper;
 
-    public ApiKeyAuthenticationFilter(
-            ApiKeyHasher apiKeyHasher,
-            ApiKeyRepository apiKeyRepository,
-            ObjectMapper objectMapper
-    ) {
-        this.apiKeyHasher = apiKeyHasher;
-        this.apiKeyRepository = apiKeyRepository;
+    public ApiKeyAuthenticationFilter(AppProperties properties, ObjectMapper objectMapper) {
+        this.expectedKey = properties.apiKey().getBytes(StandardCharsets.UTF_8);
         this.objectMapper = objectMapper;
     }
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
+        if (HttpMethod.OPTIONS.matches(request.getMethod())) {
+            return true;
+        }
         String path = request.getRequestURI();
-        return HttpMethod.OPTIONS.matches(request.getMethod())
-                || path.startsWith("/actuator/health")
-                || path.startsWith("/docs")
-                || path.startsWith("/swagger-ui")
-                || path.startsWith("/api-docs")
-                || path.startsWith("/api/v1/admin/api-keys")
-                || path.startsWith("/api/v1/demo/receiver");
+        return Arrays.stream(PUBLIC_PATHS).anyMatch(path::startsWith);
     }
 
     @Override
-    protected void doFilterInternal(
-            HttpServletRequest request,
-            HttpServletResponse response,
-            FilterChain filterChain
-    ) throws ServletException, IOException {
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
+            throws ServletException, IOException {
         String rawKey = request.getHeader(HEADER);
-        if (rawKey == null || rawKey.isBlank()) {
-            reject(response, "Missing X-API-Key header");
+        if (rawKey == null || !MessageDigest.isEqual(expectedKey, rawKey.trim().getBytes(StandardCharsets.UTF_8))) {
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+            objectMapper.writeValue(response.getWriter(), ApiError.of("unauthorized", "Missing or invalid X-API-Key header", null));
             return;
         }
-
-        var key = apiKeyRepository.findByKeyHashAndActiveTrueAndRevokedAtIsNull(apiKeyHasher.hash(rawKey.trim()));
-        if (key.isEmpty()) {
-            reject(response, "API key is invalid or revoked");
-            return;
-        }
-
         var authentication = new UsernamePasswordAuthenticationToken(
-                key.get().getName(),
-                null,
-                java.util.List.of(new SimpleGrantedAuthority("ROLE_API_CLIENT"))
-        );
+                "api-client", null, List.of(new SimpleGrantedAuthority("ROLE_API_CLIENT")));
         SecurityContextHolder.getContext().setAuthentication(authentication);
-        filterChain.doFilter(request, response);
-    }
-
-    private void reject(HttpServletResponse response, String message) throws IOException {
-        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-        response.setHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
-        objectMapper.writeValue(response.getWriter(), new ApiError(
-                "unauthorized",
-                message,
-                Map.of(),
-                null,
-                Instant.now()
-        ));
+        chain.doFilter(request, response);
     }
 }
