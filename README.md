@@ -27,7 +27,7 @@ flowchart LR
     WORKER -->|"Signed HTTP POST"| RECEIVER["Registered receiver"]
 ```
 
-An event and all of its delivery rows are saved in one transaction. The worker then works in three steps: it **claims** a batch of due deliveries in one short transaction, makes the **HTTP call outside any transaction** (so a slow receiver never holds a database lock), and **records the outcome** in a second short transaction. More detail is in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) and [`docs/ER_DIAGRAM.md`](docs/ER_DIAGRAM.md).
+An event and all of its delivery rows are saved in one transaction. The worker then works in three steps: it **claims** a batch of due deliveries in one short transaction, makes the **HTTP call outside any transaction** (so a slow receiver never holds a database lock), and **records the outcome** in a second short transaction. More detail, including the data model, is in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
 ## Run it
 
