@@ -80,4 +80,4 @@ Each attempt sends `X-SignalDock-Timestamp` (Unix seconds), `X-SignalDock-Signat
 - All `/api/v1/**` routes need `X-API-Key`; it is compared in constant time with `app.api-key`.
 - Health, Swagger/OpenAPI and the demo receivers are public. Demo beans exist only with the `demo` profile.
 - A new endpoint's signing secret is returned once; later reads show only a hint.
-- Endpoint URLs must be `http`/`https`, have a host and contain no credentials. There is no SSRF protection (see README limitations).
+- Endpoint URLs must be `http`/`https`, have a host and contain no credentials. There is no SSRF protection (see [DESIGN_DECISIONS.md](DESIGN_DECISIONS.md)).

@@ -110,17 +110,7 @@ CI runs both and builds the Compose images on every pull request and every push 
 - **At-least-once delivery:** if the app crashes after the receiver accepted a request but before the outcome is saved, the lease expires and the delivery is sent again. Receivers should deduplicate on `X-SignalDock-Delivery-Id`.
 - **Polling instead of WebSockets:** the dashboard refreshes every 4 seconds, which is plenty for an operations view and much simpler.
 
-## Known limitations
-
-- A single API key for all clients; there are no users, tenants or key rotation.
-- Endpoint signing secrets are stored in plain text, because the worker needs them to sign every attempt.
-- No SSRF protection: endpoint URLs get basic validation only. A production version would block private and internal IP addresses.
-- Tuned for one application instance. Running a few instances against the same database is safe (claim tokens, cross-instance cap), but not load-tested.
-- Events that arrive while an endpoint is paused are not queued for it, and there is no replay API yet.
-- No retention: events and attempts are kept forever.
-- Delivery is at least once, not exactly once.
-
-Every limitation, and how I would close it, is in [`docs/DESIGN_DECISIONS.md`](docs/DESIGN_DECISIONS.md#12-deliberately-not-built-and-how-i-would).
+More detail: [`docs/DESIGN_DECISIONS.md`](docs/DESIGN_DECISIONS.md)
 
 ## License
 
