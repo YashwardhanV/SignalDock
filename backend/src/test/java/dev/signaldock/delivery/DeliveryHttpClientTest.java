@@ -71,6 +71,75 @@ class DeliveryHttpClientTest {
         assertThat(result.errorMessage()).containsIgnoringCase("timeout");
     }
 
+    @Test
+    void keepsOnlyTheFirstFewKilobytesOfAHugeResponse() throws Exception {
+        server = HttpServer.create(new InetSocketAddress(0), 0);
+        server.createContext("/huge", exchange -> {
+            byte[] chunk = "x".repeat(64 * 1024).getBytes(StandardCharsets.UTF_8);
+            exchange.sendResponseHeaders(200, 0); // chunked, 16 MB in total
+            try (var body = exchange.getResponseBody()) {
+                for (int i = 0; i < 256; i++) {
+                    body.write(chunk);
+                }
+            } catch (java.io.IOException expectedWhenClientStopsReading) {
+                // The client cancels after a few kilobytes and closes the connection.
+            } finally {
+                exchange.close();
+            }
+        });
+        server.start();
+
+        DeliveryResult result = client(Duration.ofSeconds(2)).deliver(item("/huge"));
+
+        assertThat(result.successful()).isTrue();
+        assertThat(result.responseBody())
+                .hasSize(DeliveryHttpClient.MAX_RESPONSE_BYTES + DeliveryHttpClient.TRUNCATION_MARKER.length())
+                .endsWith(DeliveryHttpClient.TRUNCATION_MARKER);
+    }
+
+    @Test
+    void aReceiverThatTricklesItsBodyIsCutOffAtTheDeadline() throws Exception {
+        server = HttpServer.create(new InetSocketAddress(0), 0);
+        server.createContext("/trickle", exchange -> {
+            exchange.sendResponseHeaders(200, 0); // headers arrive at once, so HttpRequest.timeout never fires
+            try (var body = exchange.getResponseBody()) {
+                for (int i = 0; i < 100; i++) {
+                    body.write('x');
+                    body.flush();
+                    Thread.sleep(100);
+                }
+            } catch (java.io.IOException | InterruptedException expectedWhenClientGivesUp) {
+                // The client cancels the exchange at its deadline.
+            } finally {
+                exchange.close();
+            }
+        });
+        server.start();
+
+        // connect-timeout 1s + read-timeout 300ms = 1.3s hard deadline, while the body would take 10s.
+        DeliveryResult result = client(Duration.ofMillis(300)).deliver(item("/trickle"));
+
+        assertThat(result.successful()).isFalse();
+        assertThat(result.errorMessage()).containsIgnoringCase("timeout");
+        assertThat(result.latencyMs()).isLessThan(4_000);
+    }
+
+    @Test
+    void recognisesHttp410AsGone() throws Exception {
+        server = HttpServer.create(new InetSocketAddress(0), 0);
+        server.createContext("/gone", exchange -> {
+            exchange.sendResponseHeaders(410, -1);
+            exchange.close();
+        });
+        server.start();
+
+        DeliveryResult result = client(Duration.ofSeconds(1)).deliver(item("/gone"));
+
+        assertThat(result.successful()).isFalse();
+        assertThat(result.gone()).isTrue();
+        assertThat(result.failureSummary()).isEqualTo("HTTP 410");
+    }
+
     private DeliveryHttpClient client(Duration readTimeout) {
         AppProperties properties = new AppProperties(
                 "admin",
@@ -81,7 +150,10 @@ class DeliveryHttpClientTest {
                         10,
                         Duration.ofSeconds(30),
                         Duration.ofSeconds(1),
-                        Duration.ofMinutes(1)
+                        Duration.ofMinutes(1),
+                        0.2,
+                        2,
+                        5
                 ),
                 new AppProperties.Demo(false, "", "")
         );

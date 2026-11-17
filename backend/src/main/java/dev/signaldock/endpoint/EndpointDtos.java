@@ -33,6 +33,9 @@ public final class EndpointDtos {
             boolean active,
             int maxAttempts,
             String secretHint,
+            int consecutiveDeadDeliveries,
+            String disabledReason,
+            Instant disabledAt,
             Instant createdAt,
             Instant updatedAt
     ) {
@@ -46,6 +49,9 @@ public final class EndpointDtos {
                     endpoint.isActive(),
                     endpoint.getMaxAttempts(),
                     hint,
+                    endpoint.getConsecutiveDeadDeliveries(),
+                    endpoint.getDisabledReason(),
+                    endpoint.getDisabledAt(),
                     endpoint.getCreatedAt(),
                     endpoint.getUpdatedAt()
             );

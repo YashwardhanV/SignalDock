@@ -42,6 +42,12 @@ app:
     lease-duration: ${APP_DELIVERY_LEASE_DURATION:30s}
     retry-base-delay: ${APP_DELIVERY_RETRY_BASE_DELAY:30s}
     retry-max-delay: ${APP_DELIVERY_RETRY_MAX_DELAY:1h}
+    # Each retry delay is randomised by +/- this fraction so failed deliveries do not all retry at the same moment.
+    retry-jitter: ${APP_DELIVERY_RETRY_JITTER:0.2}
+    # At most this many deliveries to the same endpoint are claimed (and therefore in flight) per poll.
+    max-in-flight-per-endpoint: ${APP_DELIVERY_MAX_IN_FLIGHT_PER_ENDPOINT:2}
+    # Pause an endpoint after this many deliveries in a row end DEAD (0 turns it off). HTTP 410 pauses at once.
+    auto-disable-after-dead-deliveries: ${APP_DELIVERY_AUTO_DISABLE_AFTER_DEAD:5}
   demo:
     enabled: false
     receiver-url: ${APP_DEMO_RECEIVER_URL:http://localhost:8080/api/v1/demo/receiver/success}

@@ -25,6 +25,12 @@ public class GlobalExceptionHandler {
         return response(HttpStatus.CONFLICT, "conflict", exception.getMessage());
     }
 
+    // 422 follows the IETF Idempotency-Key header draft: the key is valid, but it was already used for a different request.
+    @ExceptionHandler(IdempotencyKeyReuseException.class)
+    ResponseEntity<ApiError> handleIdempotencyKeyReuse(IdempotencyKeyReuseException exception) {
+        return response(HttpStatus.UNPROCESSABLE_ENTITY, "idempotency_key_reused", exception.getMessage());
+    }
+
     @ExceptionHandler(InvalidRequestException.class)
     ResponseEntity<ApiError> handleInvalid(InvalidRequestException exception) {
         return response(HttpStatus.BAD_REQUEST, "invalid_request", exception.getMessage());

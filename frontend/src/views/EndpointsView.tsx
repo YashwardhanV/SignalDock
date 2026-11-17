@@ -277,7 +277,15 @@ function EndpointCard({
         <span>{endpoint.url}</span>
         <small>
           {endpoint.secretHint} · {endpoint.maxAttempts} attempts
+          {endpoint.active && endpoint.consecutiveDeadDeliveries > 0
+            ? ` · ${endpoint.consecutiveDeadDeliveries} dead in a row`
+            : ""}
         </small>
+        {!endpoint.active && endpoint.disabledReason ? (
+          <small className="endpoint-disabled-reason">
+            {endpoint.disabledReason}
+          </small>
+        ) : null}
       </div>
       <button
         className="mini-button"

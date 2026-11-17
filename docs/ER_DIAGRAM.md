@@ -9,6 +9,9 @@ erDiagram
         varchar signing_secret
         boolean active
         int max_attempts
+        int consecutive_dead_deliveries
+        varchar disabled_reason
+        timestamptz disabled_at
         timestamptz created_at
         timestamptz updated_at
     }
@@ -38,6 +41,7 @@ erDiagram
         int max_attempts
         timestamptz next_retry_at
         timestamptz lease_until
+        uuid claim_token
         text last_error
         timestamptz completed_at
         timestamptz created_at
@@ -69,13 +73,15 @@ erDiagram
 - `(endpoint_id, event_pattern)` is unique on `endpoint_subscriptions`. Patterns are stored in lower case.
 - `(delivery_id, attempt_number)` is unique on `delivery_attempts`, which keeps the attempt sequence auditable.
 - Check constraints limit `deliveries.status` to the five states, `max_attempts` to 1–12 on endpoints, and keep counters and latency non-negative.
-- Endpoints are paused (`active = false`) rather than deleted, so old deliveries keep a valid reference.
+- Endpoints are paused (`active = false`) rather than deleted, so old deliveries keep a valid reference. `disabled_reason` is set only when SignalDock paused the endpoint itself.
+- `deliveries.claim_token` changes on every claim; only the worker holding the current token may record an outcome.
 
 ## Indexes
 
 | Index | Used by |
 |---|---|
 | `idx_deliveries_status_next_retry (status, next_retry_at)` | The worker's claim query |
+| `idx_deliveries_endpoint_next_retry (endpoint_id, next_retry_at)` | Ranking due deliveries per endpoint in the claim query |
 | `idx_deliveries_created_at (created_at DESC)` | The newest-first delivery list |
 | `idx_events_created_at (created_at DESC)` | The newest-first event list |
 | `uq_delivery_attempt_number (delivery_id, attempt_number)` | Loading a delivery's attempts in order |

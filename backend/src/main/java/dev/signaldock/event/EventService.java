@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.signaldock.config.PageResponse;
 import dev.signaldock.delivery.Delivery;
 import dev.signaldock.delivery.DeliveryRepository;
+import dev.signaldock.exception.IdempotencyKeyReuseException;
 import dev.signaldock.exception.InvalidRequestException;
 import dev.signaldock.exception.ResourceNotFoundException;
 import dev.signaldock.subscription.EventPatternMatcher;
@@ -43,15 +44,17 @@ public class EventService {
         String idempotencyKey = normalizeIdempotencyKey(rawIdempotencyKey);
         UUID eventId = UUID.randomUUID();
         Instant now = Instant.now();
-        int inserted = eventRepository.insertIfAbsent(
-                eventId,
-                request.eventType().trim(),
-                toJson(request),
-                idempotencyKey,
-                now
-        );
+        String eventType = request.eventType().trim();
+        String payloadJson = toJson(request);
+        int inserted = eventRepository.insertIfAbsent(eventId, eventType, payloadJson, idempotencyKey, now);
 
         if (inserted == 0) {
+            // A retry of the same request is safe and returns the original event. Reusing the key for a
+            // different request is a client bug; silently returning the old event would hide it.
+            if (!eventRepository.storedRequestMatches(idempotencyKey, eventType, payloadJson)) {
+                throw new IdempotencyKeyReuseException(
+                        "Idempotency-Key was already used for a different event type or payload.");
+            }
             Event existing = eventRepository.findByIdempotencyKey(idempotencyKey)
                     .orElseThrow(() -> new IllegalStateException("Idempotent event disappeared after conflict"));
             return response(existing, 0, true);

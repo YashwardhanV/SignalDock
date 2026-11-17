@@ -8,7 +8,11 @@ import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.UUID;
+import org.hibernate.annotations.DynamicUpdate;
 
+// DynamicUpdate: only changed columns are written, so editing an endpoint never overwrites the
+// health counter that delivery threads update with their own atomic SQL.
+@DynamicUpdate
 @Entity
 @Table(name = "webhook_endpoints")
 public class WebhookEndpoint {
@@ -29,6 +33,15 @@ public class WebhookEndpoint {
 
     @Column(name = "max_attempts", nullable = false)
     private int maxAttempts;
+
+    @Column(name = "consecutive_dead_deliveries", nullable = false)
+    private int consecutiveDeadDeliveries;
+
+    @Column(name = "disabled_reason", length = 500)
+    private String disabledReason;
+
+    @Column(name = "disabled_at")
+    private Instant disabledAt;
 
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
@@ -65,6 +78,12 @@ public class WebhookEndpoint {
         this.name = name;
         this.url = url;
         this.maxAttempts = maxAttempts;
+        if (active && !this.active) {
+            // A person turning the endpoint back on starts it with a clean health record.
+            this.consecutiveDeadDeliveries = 0;
+            this.disabledReason = null;
+            this.disabledAt = null;
+        }
         this.active = active;
     }
 
@@ -90,6 +109,18 @@ public class WebhookEndpoint {
 
     public int getMaxAttempts() {
         return maxAttempts;
+    }
+
+    public int getConsecutiveDeadDeliveries() {
+        return consecutiveDeadDeliveries;
+    }
+
+    public String getDisabledReason() {
+        return disabledReason;
+    }
+
+    public Instant getDisabledAt() {
+        return disabledAt;
     }
 
     public Instant getCreatedAt() {

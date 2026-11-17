@@ -16,38 +16,11 @@ import java.time.Instant;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
-@Testcontainers
-@AutoConfigureMockMvc
-@SpringBootTest
-class ApiIntegrationTest {
-    private static final String API_KEY = "integration-api-key";
-
-    @Container
-    static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16-alpine");
-
-    @DynamicPropertySource
-    static void properties(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
-        registry.add("spring.datasource.username", POSTGRES::getUsername);
-        registry.add("spring.datasource.password", POSTGRES::getPassword);
-        registry.add("app.demo.enabled", () -> "true");
-        registry.add("app.api-key", () -> API_KEY);
-        registry.add("app.demo.receiver-url", () -> "http://127.0.0.1:65530/success");
-        registry.add("app.demo.failure-url", () -> "http://127.0.0.1:65530/failure");
-        registry.add("app.delivery.poll-delay", () -> "3600000");
-    }
-
+class ApiIntegrationTest extends PostgresIntegrationTest {
     @Autowired MockMvc mockMvc;
     @Autowired ObjectMapper objectMapper;
     @Autowired EventRepository eventRepository;
@@ -103,7 +76,7 @@ class ApiIntegrationTest {
     @Transactional
     void manualRetryRequeuesDeadDeliveryAndAddsAttemptBudget() throws Exception {
         UUID endpointId = endpointRepository.findAll().stream()
-                .filter(endpoint -> endpoint.getMaxAttempts() == 5)
+                .filter(endpoint -> endpoint.getName().equals("Demo receiver"))
                 .findFirst()
                 .orElseThrow()
                 .getId();
@@ -130,5 +103,48 @@ class ApiIntegrationTest {
                 .andExpect(jsonPath("$.status").value("RETRY_PENDING"))
                 .andExpect(jsonPath("$.attemptCount").value(3))
                 .andExpect(jsonPath("$.maxAttempts").value(8));
+    }
+
+    @Test
+    @Transactional
+    void reusingAnIdempotencyKeyForADifferentRequestIsRejected() throws Exception {
+        String key = "reuse-" + UUID.randomUUID();
+        sendEvent(key, """
+                {"eventType":"order.created","payload":{"orderId":"ord_1","amount":10}}
+                """).andExpect(status().isCreated());
+
+        sendEvent(key, """
+                {"eventType":"order.created","payload":{"orderId":"ord_2","amount":10}}
+                """)
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.code").value("idempotency_key_reused"));
+
+        sendEvent(key, """
+                {"eventType":"order.cancelled","payload":{"orderId":"ord_1","amount":10}}
+                """).andExpect(status().isUnprocessableEntity());
+    }
+
+    @Test
+    @Transactional
+    void aRetryWithTheSameJsonInADifferentShapeIsStillADuplicate() throws Exception {
+        String key = "same-" + UUID.randomUUID();
+        sendEvent(key, """
+                {"eventType":"order.created","payload":{"orderId":"ord_1","amount":10}}
+                """).andExpect(status().isCreated());
+
+        // Different key order, whitespace and number formatting, same JSON value.
+        sendEvent(key, """
+                {"eventType":"order.created","payload":{ "amount" : 10.0, "orderId" : "ord_1" }}
+                """)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.duplicate").value(true));
+    }
+
+    private org.springframework.test.web.servlet.ResultActions sendEvent(String key, String body) throws Exception {
+        return mockMvc.perform(post("/api/v1/events")
+                .header("X-API-Key", API_KEY)
+                .header("Idempotency-Key", key)
+                .contentType("application/json")
+                .content(body));
     }
 }

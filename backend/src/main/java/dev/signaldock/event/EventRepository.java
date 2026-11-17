@@ -15,6 +15,23 @@ public interface EventRepository extends JpaRepository<Event, UUID> {
 
     Page<Event> findAllByOrderByCreatedAtDesc(Pageable pageable);
 
+    /**
+     * True if the stored event for this key has the same type and payload. The comparison is done by
+     * Postgres on jsonb, so key order, whitespace and number formatting ({"a":1.0} vs {"a":1}) do not matter.
+     */
+    @Query(value = """
+            select count(*) > 0
+            from events
+            where idempotency_key = :idempotencyKey
+              and event_type = :eventType
+              and payload = cast(:payload as jsonb)
+            """, nativeQuery = true)
+    boolean storedRequestMatches(
+            @Param("idempotencyKey") String idempotencyKey,
+            @Param("eventType") String eventType,
+            @Param("payload") String payload
+    );
+
     @Modifying(flushAutomatically = true)
     @Query(value = """
             insert into events (id, event_type, payload, idempotency_key, created_at)

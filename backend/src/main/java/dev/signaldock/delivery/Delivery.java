@@ -47,6 +47,9 @@ public class Delivery {
     @Column(name = "lease_until")
     private Instant leaseUntil;
 
+    @Column(name = "claim_token")
+    private UUID claimToken;
+
     @Column(name = "last_error")
     private String lastError;
 
@@ -85,9 +88,24 @@ public class Delivery {
         updatedAt = Instant.now();
     }
 
-    public void claim(Instant now, Duration leaseDuration) {
+    /** Claims the delivery for one worker. Every claim gets a fresh token, including a reclaim after an expired lease. */
+    public UUID claim(Instant now, Duration leaseDuration) {
         status = DeliveryStatus.PROCESSING;
         leaseUntil = now.plus(leaseDuration);
+        claimToken = UUID.randomUUID();
+        return claimToken;
+    }
+
+    /** True only while this exact claim is the current one. */
+    public boolean isClaimedBy(UUID token) {
+        return status == DeliveryStatus.PROCESSING && token != null && token.equals(claimToken);
+    }
+
+    /** Gives a claimed delivery back to the queue without counting an attempt (for example, its endpoint was paused). */
+    public void release(Instant now) {
+        status = attemptCount == 0 ? DeliveryStatus.PENDING : DeliveryStatus.RETRY_PENDING;
+        nextRetryAt = now;
+        clearLease();
     }
 
     public void markDelivered(Instant completedAt) {
@@ -124,6 +142,7 @@ public class Delivery {
 
     private void clearLease() {
         leaseUntil = null;
+        claimToken = null;
     }
 
     public UUID getId() {
@@ -156,6 +175,10 @@ public class Delivery {
 
     public Instant getLeaseUntil() {
         return leaseUntil;
+    }
+
+    public UUID getClaimToken() {
+        return claimToken;
     }
 
     public String getLastError() {

@@ -25,10 +25,10 @@ The frontend polls a snapshot every four seconds.
 | Package | Responsibility | Important classes |
 |---|---|---|
 | `security` | Compare `X-API-Key` with the one configured key | `ApiKeyAuthenticationFilter`, `SecurityConfig` |
-| `endpoint` | Register and pause receivers, validate URLs, generate signing secrets | `EndpointController`, `EndpointService`, `EndpointUrlValidator` |
+| `endpoint` | Register and pause receivers, validate URLs, generate signing secrets, endpoint health (dead streak, auto-pause reason) | `EndpointController`, `EndpointService`, `EndpointUrlValidator` |
 | `subscription` | Event-pattern routes and exact / `order.*` / `*` matching | `SubscriptionService`, `EventPatternMatcher` |
 | `event` | Idempotent ingestion and creating one delivery per matched endpoint | `EventController`, `EventService`, `EventRepository` |
-| `delivery` | Queue claim, HTTP sending, signing, attempts, backoff, manual retry | `DeliveryWorker`, `DeliveryWorkerService`, `DeliveryService`, `DeliveryHttpClient`, `RetryPolicy` |
+| `delivery` | Queue claim with per-endpoint cap, parallel HTTP sending, signing, claim tokens, attempts, backoff with jitter, endpoint auto-pause, manual retry | `DeliveryWorker`, `DeliveryWorkerService`, `DeliveryService`, `DeliveryHttpClient`, `RetryPolicy` |
 | `exception` | One JSON error shape for every failure | `GlobalExceptionHandler`, `ApiError` |
 | `config` | Typed settings, OpenAPI, pagination | `AppProperties`, `OpenApiConfig`, `PageResponse` |
 | `demo` | Demo seed data and success (202) / failure (503) receivers | `DemoDataInitializer`, `DemoReceiverController` |
@@ -37,20 +37,21 @@ The frontend polls a snapshot every four seconds.
 
 `EventService.ingest` runs in one transaction:
 
-1. `INSERT ... ON CONFLICT (idempotency_key) DO NOTHING`. If no row was inserted, the key was seen before: return the existing event with `duplicate: true` (HTTP 200).
+1. `INSERT ... ON CONFLICT (idempotency_key) DO NOTHING`. If no row was inserted, the key was seen before. If the stored type and payload match (compared as `jsonb`), return the existing event with `duplicate: true` (HTTP 200); otherwise reject with HTTP 422.
 2. Otherwise load active subscriptions on active endpoints, keep the ones whose pattern matches, and save one `PENDING` delivery per distinct endpoint.
 3. Commit. The event and its deliveries become visible together, or not at all (HTTP 201).
 
 ## Delivery worker
 
-`DeliveryWorker.poll` runs every `app.delivery.poll-delay` milliseconds:
+`DeliveryWorker.poll` runs `app.delivery.poll-delay` milliseconds after the previous poll finished:
 
-1. `DeliveryWorkerService.claimDue` (transaction 1) selects due `PENDING`/`RETRY_PENDING` rows, plus `PROCESSING` rows whose `lease_until` has passed, using `FOR UPDATE SKIP LOCKED` with a batch limit. Each row becomes `PROCESSING` with a new lease.
-2. `DeliveryWorkerService.prepare` reads the URL, secret and raw payload.
-3. `DeliveryHttpClient.deliver` signs and sends the request **with no transaction open**. Connect/read timeouts bound the wait; redirects are not followed.
-4. `DeliveryWorkerService.recordOutcome` (transaction 2) locks the row with `findByIdForUpdate`, returns early unless it is still `PROCESSING`, saves a `delivery_attempts` row and moves the delivery to `DELIVERED`, `RETRY_PENDING` or `DEAD`.
+1. `DeliveryWorkerService.claimDue` (transaction 1) picks due `PENDING`/`RETRY_PENDING` rows, plus `PROCESSING` rows whose `lease_until` has passed, **on active endpoints only**. A window function ranks them per endpoint so no endpoint gets more than `max-in-flight-per-endpoint` deliveries in flight (rows already in flight on any worker count). The chosen rows are locked with `FOR UPDATE OF d SKIP LOCKED`, become `PROCESSING` with a new lease and a new random `claim_token`.
+2. Every claimed delivery is then handled on its own virtual thread; the poll waits for all of them.
+3. `DeliveryWorkerService.prepare` (transaction 2) checks the claim token is still current. If the endpoint was paused since the claim, the delivery goes back to the queue without using an attempt. Otherwise it reads the URL, secret and raw payload.
+4. `DeliveryHttpClient.deliver` signs and sends the request **with no transaction open**. Connect timeout, header timeout and a hard overall deadline (connect + read timeout) bound the wait; only the first ~4 KB of the response is read; redirects are not followed.
+5. `DeliveryWorkerService.recordOutcome` (transaction 3) locks the row and returns early unless the claim token still matches. It saves a `delivery_attempts` row and moves the delivery to `DELIVERED`, `RETRY_PENDING` or `DEAD`. It also updates endpoint health with atomic SQL: a success resets the dead streak; a DEAD delivery increments it and pauses the endpoint at the threshold; HTTP 410 pauses it at once.
 
-`DeliveryWorker` calls these methods on a separate bean, so Spring's `@Transactional` proxy applies to each call. If the process dies between steps 1 and 4, the lease expires and another poll reclaims the row. That is why delivery is at least once.
+`DeliveryWorker` calls these methods on a separate bean, so Spring's `@Transactional` proxy applies to each call. If the process dies between steps 1 and 5, the lease expires and another poll reclaims the row with a new token. That is why delivery is at least once. The app refuses to start if the lease is not longer than connect + read timeout.
 
 ## Delivery state machine
 
@@ -61,13 +62,14 @@ stateDiagram-v2
     RETRY_PENDING --> PROCESSING: due and claimed
     PROCESSING --> DELIVERED: HTTP 2xx
     PROCESSING --> RETRY_PENDING: failed, attempts remain
-    PROCESSING --> DEAD: attempt budget used up
+    PROCESSING --> DEAD: attempt budget used up, or HTTP 410
+    PROCESSING --> PENDING: endpoint paused after claim (no attempt used)
     PROCESSING --> PROCESSING: expired lease reclaimed
     DEAD --> RETRY_PENDING: manual retry adds a budget
     DELIVERED --> [*]
 ```
 
-Backoff after attempt `n` is `min(baseDelay × 2^(n-1), maxDelay)`. A manual retry keeps every old attempt and adds the endpoint's `maxAttempts` to the delivery's budget.
+Backoff after attempt `n` is `min(baseDelay × 2^(n-1), maxDelay)`, randomised by +/- `retry-jitter` (default 20%). A manual retry keeps every old attempt and adds the endpoint's `maxAttempts` to the delivery's budget.
 
 ## Signature contract
 

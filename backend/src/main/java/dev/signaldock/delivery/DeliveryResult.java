@@ -14,6 +14,11 @@ public record DeliveryResult(
         return httpStatus != null && httpStatus >= 200 && httpStatus < 300;
     }
 
+    /** HTTP 410 Gone: the receiver says this URL will never accept webhooks again, so retrying is pointless. */
+    public boolean gone() {
+        return httpStatus != null && httpStatus == 410;
+    }
+
     public String failureSummary() {
         if (errorMessage != null && !errorMessage.isBlank()) {
             return errorMessage;

@@ -21,6 +21,9 @@ export type Endpoint = {
   active: boolean;
   maxAttempts: number;
   secretHint: string;
+  consecutiveDeadDeliveries: number;
+  disabledReason: string | null;
+  disabledAt: string | null;
   createdAt: string;
   updatedAt: string;
 };
